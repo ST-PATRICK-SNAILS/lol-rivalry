@@ -5,7 +5,7 @@ import csv
 base_url = "https://gol.gg"
 teams_list_url = f"{base_url}/teams/list/season-S14/split-Spring/tournament-ALL/"
 
-def write_to_csv(data, filename='Org_to_ID.csv'):
+def write_to_csv(data, filename='../data/orgIds.csv'):
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(['Team Name', 'Team ID'])

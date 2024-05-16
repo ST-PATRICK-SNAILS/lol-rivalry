@@ -71,7 +71,7 @@ for season in range(11, 15):
 
 
 # Defining the CSV file path
-csv_file_path = 'General_League_Champions_Scraping.csv'
+csv_file_path = '../data/champions.csv'
 
 # Writing data to CSV
 with open(csv_file_path, mode='w', newline='') as file:
