@@ -42,7 +42,7 @@ def get_player_data(players_list_url):
     return players_data
 
 # Function to write data to CSV
-def write_to_csv(data, filename='../data/playerIds.csv'):
+def write_to_csv(data, filename='Player_to_ID.csv'):
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(['Player Name', 'Player ID'])

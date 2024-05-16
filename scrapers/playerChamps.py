@@ -82,7 +82,7 @@ def get_player_champ_IDs(player_id):
 
 def main():
     input_filename = 'Player_to_ID.csv'
-    output_filename = 'Player_Champ_Stats_All.csv'
+    output_filename = '../data/playerChamps.csv'
 
     with open(input_filename, newline='', encoding='utf-8') as infile:
         reader = csv.reader(infile)
