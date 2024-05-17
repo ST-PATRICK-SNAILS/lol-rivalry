@@ -4,7 +4,6 @@ import csv
 
 # URL of the page with the list of players
 base_url = "https://gol.gg"
-players_list_url = f"{base_url}/players/list/season-S14/split-Spring/tournament-ALL/"
 
 # Function to get player data
 def get_player_data(players_list_url):
@@ -42,7 +41,7 @@ def get_player_data(players_list_url):
     return players_data
 
 # Function to write data to CSV
-def write_to_csv(data, filename='Player_to_ID.csv'):
+def write_to_csv(data, filename='../data/playerIds.csv'):
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(['Player Name', 'Player ID'])
@@ -50,8 +49,15 @@ def write_to_csv(data, filename='Player_to_ID.csv'):
 
 # Main function
 def main():
-    players_data = get_player_data(players_list_url)
-    write_to_csv(players_data)
+    players = {}
+    for i in range(11, 15):
+        for pair in get_player_data(f"{base_url}/players/list/season-S{i}/split-ALL/tournament-ALL/"):
+            players[pair[0]] = pair[1]
+            
+    data = list(players.items())
+    data.sort(key=lambda x:x[0])
+            
+    write_to_csv(data)
 
     print("Data has been written to players_data.csv")
 
