@@ -1,17 +1,8 @@
 import csv
 import time
-
 import requests
 from bs4 import BeautifulSoup
-
-# URL of the page to scrape
-base_url = 'https://gol.gg'
-list_url = f'{base_url}/players/list/season-S14/split-Spring/tournament-ALL/'
-
-# Headers to mimic a browser visit
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-}
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def get_soup(url_url):
@@ -20,146 +11,105 @@ def get_soup(url_url):
     return BeautifulSoup(response_url.text, 'html.parser')
 
 
-# Parse the initial list of players
-soup = get_soup(list_url)
-players_table = soup.find('table', class_='table_list')
 player_links = []
-
 player_names = []
 
-for row in players_table.find_all('tr')[1:]:  # Skip the header
-    cols = row.find_all('td')
-    raw_name = str(cols[0].find('a'))
-    name = raw_name[raw_name.find('>') + 1: raw_name.find('</')]
+# Loop through all seasons and extract player links and names
+for season in range(11, 15):
+    # URL of the page to scrape
+    list_url = f'https://gol.gg/players/list/season-S' + str(season) + '/split-ALL/tournament-ALL/'
 
-    player_names.append(name)
+    # Headers to mimic a browser visit
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
 
-    if cols:
-        # Concatenate the base URL with the href attribute of the anchor tag within the first column
-        player_link = base_url + "/players" + str(cols[0].find('a')['href'])[1:]
-        player_links.append(player_link)
+    # Parse the initial list of players
+    soup = get_soup(list_url)
+    players_table = soup.find('table', class_='table_list')
 
-# Print all player profile links
-# for link in player_links:
-#     print(link)
+    for row in players_table.find_all('tr')[1:]:  # Skip the header
+        cols = row.find_all('td')
+        raw_name = str(cols[0].find('a'))
+        name = raw_name[raw_name.find('>') + 1: raw_name.find('</')]
+        if name not in player_names:
+            player_names.append(name)
+            if cols:
+                player_link = "https://gol.gg/players" + str(cols[0].find('a')['href'])[1:]
+                player_links.append(player_link)
 
-contents = []
+# print(player_links)
+# print(len(player_links))
+# print(len(player_names))
 
-name_counter = 0
+# Limiting the player names and links for testing purposes
+# player_names = player_names[:15]
+# player_links = player_links[:15]
 
-player_names = player_names[:3]
-player_links = player_links[:3]
-
-for link in player_links:
+def scrape_player_data(link, name_counter):
+    contents = []
     for season in range(11, 15):
         for split in range(1, 3):
-
             if season == 14 and split == 2:
                 continue
 
-            split_name = "None"
-
-            if split == 1:
-                split_name = "Spring"
-            elif split == 2:
-                split_name = "Summer"
-
+            split_name = "Spring" if split == 1 else "Summer"
             player_url_number = link[link.find('player-stats/') + 13: link.find('/season')]
-            # print(player_url_number)
-
-            # Step 1: Fetch the webpage content with headers
-            url = "https://gol.gg/players/player-stats/" + player_url_number + "/season-S" + str(
-                season) + "/split-" + str(split_name) + "/tournament-ALL/"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'
-            }
+            url = f"https://gol.gg/players/player-stats/{player_url_number}/season-S{season}/split-{split_name}/tournament-ALL/"
             response = requests.get(url, headers=headers)
             if response.status_code != 200:
-                raise Exception(f"Failed to load page {url}")
-            html_content = response.content
-
-            # Step 2: Parse the HTML content using BeautifulSoup
-            soup = BeautifulSoup(html_content, 'html.parser')
-
+                continue
+            soup = BeautifulSoup(response.content, 'html.parser')
             tables = soup.find_all('table')
 
             data = [str(player_names[name_counter]) + " S" + str(season) + " " + str(split_name)]
 
-
-            def tableContainsTitle(table, text):
+            def table_contains_title(table, text):
                 th = table.find_all('th')
-                if (th and th[0]):
-                    if (text.lower() in th[0].get_text().lower()):
-                        return True
-                return False
+                return th and th[0] and text.lower() in th[0].get_text().lower()
 
-
-            # Step 3: Extract the general stats
-            generalTable = [t for t in tables if tableContainsTitle(t, "GENERAL STATS")]
-            if (len(generalTable) == 1):
-                generalKeys = ['Record', 'KDA', 'CS Per Minute', 'Gold per minute', 'Gold%', 'Kill Participation']
-                for key in generalKeys:
+            general_table = [t for t in tables if table_contains_title(t, "GENERAL STATS")]
+            if general_table:
+                general_keys = ['Record', 'KDA', 'CS Per Minute', 'Gold per minute', 'Gold%', 'Kill Participation']
+                for key in general_keys:
                     val = '-'
-                    for row in generalTable[0].find_all('tr')[1:]:
+                    for row in general_table[0].find_all('tr')[1:]:
                         entries = row.find_all('td')
-                        if (len(entries) >= 2 and entries[0].get_text().lower().startswith(key.lower())):
+                        if len(entries) >= 2 and entries[0].get_text().lower().startswith(key.lower()):
                             val = entries[1].get_text().replace(u'\xa0', u'')
                             break
                     data.append(val)
 
-            # print(data[1])
             temp_data = data[0]
             if data[1] == "0W - 0L":
-                data.clear()
-                for i in range(0, 21):
-                    if i == 0:
-                        data.append(temp_data)
-                    else:
-                        data.append('-')
+                data = [temp_data] + ['-'] * 20
 
-            # Step 4: Extract the aggression stats
-            aggressionTable = [t for t in tables if tableContainsTitle(t, "AGGRESSION")]
-            if (len(aggressionTable) == 1):
-                aggressionKeys = ['Damage Per Minute', 'Damage%', 'K+A Per Minute', 'Solo Kills', 'Penta Kills']
-                for key in aggressionKeys:
+            aggression_table = [t for t in tables if table_contains_title(t, "AGGRESSION")]
+            if aggression_table:
+                aggression_keys = ['Damage Per Minute', 'Damage%', 'K+A Per Minute', 'Solo Kills', 'Penta Kills']
+                for key in aggression_keys:
                     val = '-'
-                    for row in aggressionTable[0].find_all('tr')[1:]:
+                    for row in aggression_table[0].find_all('tr')[1:]:
                         entries = row.find_all('td')
-                        if (len(entries) >= 2 and entries[0].get_text().lower().startswith(key.lower())):
+                        if len(entries) >= 2 and entries[0].get_text().lower().startswith(key.lower()):
                             val = entries[1].get_text().replace(u'\xa0', u'')
                             break
                     data.append(val)
 
-            # Step 5: Extract the champion stats
-            tables = soup.find_all('table', class_="table_list")
-
-            for table in tables:
-                if tableContainsTitle(table, "Champion"):
+            champion_table = soup.find_all('table', class_="table_list")
+            for table in champion_table:
+                if table_contains_title(table, "Champion"):
                     rows = table.find_all('tr')
-
-                    # print(rows)
-                    for i in range(1, len(rows)):
-
-                        if i > 6:
-                            break
+                    for i in range(1, min(len(rows), 7)):
                         if i % 2 == 1:
                             td_list = rows[i].find_all('td')
-
-                            time.sleep(1)
                             name = td_list[0].find('img')['alt']
                             data.append(name)
+                            data.append(td_list[1].text.strip())
+                            data.append(td_list[2].text.strip())
 
-                            games = td_list[1].text.strip()
-                            data.append(games)
+            data += ['-'] * (21 - len(data))
 
-                            winrate = td_list[2].text.strip()
-                            data.append(winrate)
-
-            if len(data) < 21:
-                for i in range(21 - len(data)):
-                    data.append('-')
-
-            # print(champion_stats)
             contents.append({
                 'Name': data[0],
                 'Record': data[1],
@@ -183,20 +133,33 @@ for link in player_links:
                 'Games C': data[19],
                 'Winrate C': data[20],
             })
-            print(data)
 
-    name_counter += 1
+    print(contents)
+    return contents
 
-# Defining the CSV file path
-csv_file_path = '../data/playerHistory.csv'
 
-# Writing data to CSV
-with open(csv_file_path, mode='w', newline='') as file:
-    writer = csv.DictWriter(file,
-                            fieldnames=['Name', 'Record', 'KDA', 'CSPM', 'GPM', 'Gold %',
-                                        'Kill Participation %', 'Damage Per Minute', 'Damage %',
-                                        'K+A/M', 'Solo Kills', 'Penta Kills', 'Champion A', 'Games A',
-                                        'Winrate A', 'Champion B', 'Games B', 'Winrate B',
-                                        'Champion C', 'Games C', 'Winrate C'])
-    writer.writeheader()
-    writer.writerows(contents)
+def main():
+    all_contents = []
+    with ThreadPoolExecutor(max_workers=300) as executor:
+        futures = [executor.submit(scrape_player_data, link, name_counter) for name_counter, link in
+                   enumerate(player_links)]
+        for future in as_completed(futures):
+            all_contents.extend(future.result())
+
+    # Defining the CSV file path
+    csv_file_path = '../data/playerHistory.csv'
+
+    # Writing data to CSV
+    with open(csv_file_path, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=[
+            'Name', 'Record', 'KDA', 'CSPM', 'GPM', 'Gold %', 'Kill Participation %',
+            'Damage Per Minute', 'Damage %', 'K+A/M', 'Solo Kills', 'Penta Kills',
+            'Champion A', 'Games A', 'Winrate A', 'Champion B', 'Games B',
+            'Winrate B', 'Champion C', 'Games C', 'Winrate C'
+        ])
+        writer.writeheader()
+        writer.writerows(all_contents)
+
+
+if __name__ == '__main__':
+    main()

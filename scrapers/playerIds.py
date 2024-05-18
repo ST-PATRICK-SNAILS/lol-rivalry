@@ -1,10 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
-
-# URL of the page with the list of players
-base_url = "https://gol.gg"
-
 # Function to get player data
 def get_player_data(players_list_url):
 
@@ -51,7 +47,7 @@ def write_to_csv(data, filename='../data/playerIds.csv'):
 def main():
     players = {}
     for i in range(11, 15):
-        for pair in get_player_data(f"{base_url}/players/list/season-S{i}/split-ALL/tournament-ALL/"):
+        for pair in get_player_data(f"https://gol.gg/players/list/season-S{i}/split-ALL/tournament-ALL/"):
             players[pair[0]] = pair[1]
             
     data = list(players.items())
