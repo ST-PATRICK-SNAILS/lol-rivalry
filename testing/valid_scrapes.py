@@ -10,7 +10,7 @@ success = 0
 
 for i, file in enumerate(files, start=1):
     try:
-        df = pd.read_csv(f"{route}/{file}")
+        df = pd.read_csv(f"{route}/{file}", keep_default_na=False, na_values='-')
     except Exception as e:
         print(f"\nTEST {i}: Exception occured in reading file {file}")
         print(e)
