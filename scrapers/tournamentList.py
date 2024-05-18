@@ -26,13 +26,12 @@ def main():
         for tournament in get_tournament_data(i):
             data = [f"S{i}"]
             for key in keys:
-                broken = False
                 for entry in tournament.items():
-                    if(len(entry) == 2 and entry[0] == key):
+                    if len(entry) == 2 and entry[0] == key:
                         data.append(entry[1])
-                        broken = True
                         break
-                if not broken: data.append('-')
+                else:
+                    data.append('-')
             rows.append(data)
     write_to_csv(rows)
     print("Data has been written to tournament_list.csv")
