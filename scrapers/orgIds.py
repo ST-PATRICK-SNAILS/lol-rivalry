@@ -2,8 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 
-base_url = "https://gol.gg"
-
 splits = [
     {"name": "season-S14/split-Spring/", "suffix": "S14 Spring"},
     {"name": "season-S13/split-Summer/", "suffix": "S13 Summer"},
@@ -22,7 +20,7 @@ def write_to_csv(data, filename='../data/orgIds.csv'):
 
 def get_team_data(split):
     name, suffix = split["name"], split["suffix"]
-    teams_list_url = f"{base_url}/teams/list/{name}tournament-ALL/"
+    teams_list_url = f"https://gol.gg/teams/list/{name}tournament-ALL/"
 
     # Headers to mimic a browser visit
     headers = {

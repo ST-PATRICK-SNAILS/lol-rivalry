@@ -17,8 +17,7 @@ player_names = []
 # Loop through all seasons and extract player links and names
 for season in range(11, 15):
     # URL of the page to scrape
-    base_url = 'https://gol.gg'
-    list_url = f'{base_url}/players/list/season-S' + str(season) + '/split-ALL/tournament-ALL/'
+    list_url = f'https://gol.gg/players/list/season-S' + str(season) + '/split-ALL/tournament-ALL/'
 
     # Headers to mimic a browser visit
     headers = {
@@ -36,7 +35,7 @@ for season in range(11, 15):
         if name not in player_names:
             player_names.append(name)
             if cols:
-                player_link = base_url + "/players" + str(cols[0].find('a')['href'])[1:]
+                player_link = "https://gol.gg/players" + str(cols[0].find('a')['href'])[1:]
                 player_links.append(player_link)
 
 # print(player_links)
