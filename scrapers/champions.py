@@ -30,7 +30,7 @@ def get_champion_data(season, split):
     for row in rows[1:]:
         cols = row.find_all('td')
         link = cols[0].find('a')
-        row_data = [f"S{season}", link.get_text().strip(), link['href'].split('/')[2]]
+        row_data = [f"S{season}", split, link.get_text().strip(), link['href'].split('/')[2]]
         for col in cols[1:]:
             text = col.get_text().strip()
             if text:
@@ -47,7 +47,7 @@ csv_file_path = '../data/champions.csv'
 # Writing data to CSV
 with open(csv_file_path, mode='w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Season', 'Champion', 'Picks', 'Bans', 'Presence', 'Wins', 'Losses', 'Win Rate', 'KDA',
+    writer.writerow(['Season', 'Split', 'Champion', 'Picks', 'Bans', 'Presence', 'Wins', 'Losses', 'Win Rate', 'KDA',
                                         'Avg BT', 'Avg GT', 'CSM', 'DPM', 'GPM', 'CSD@15', 'GD@15', 'XPD@15'])
     for season in range(11, 15):
         for split in ["Spring", "Summer"]:
