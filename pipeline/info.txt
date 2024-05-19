@@ -1,0 +1,8 @@
+Event, Team 1 ID, Team 2 ID, Season, Split, Games, Result
+
+1. event propagate
+
+Event
+-> Region
+-> Tier
+-> Meta

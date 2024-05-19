@@ -107,7 +107,7 @@ def get_team_tournament(id, tourney):
 with open('../data/orgIds.csv', mode='r', newline='') as file:
     with open('../data/orgStats.csv', mode='w', newline='', encoding='utf-8') as writefile:
         writer = csv.writer(writefile)
-        writer.writerow(['Team Name', 'TeamId', 'Event', 'Roster Names', 'Roster Ids', 'Region', 'Record', 'Average Game Duration', 'Ally Bans', 'Blue Ally Bans', 'Red Ally Bans', 
+        writer.writerow(['Team Name', 'Team ID', 'Event', 'Roster Names', 'Roster Ids', 'Region', 'Record', 'Average Game Duration', 'Ally Bans', 'Blue Ally Bans', 'Red Ally Bans', 
                     'Enemy Bans', 'Blue Enemy Bans', 'Red Enemy Bans', 'Damage Per Minute', 'First Blood', 'Kills Per Game', 
                     'Deaths Per Game', 'Average Kill / Death Ratio', 'Average Assists / Kill', 'Plates / game (TOP|MID|BOT)', 
                     'Dragons / game', 'Dragons at 15 min', 'Herald / game', 'Nashors / game'])
