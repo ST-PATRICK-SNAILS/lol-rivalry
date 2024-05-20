@@ -45,8 +45,8 @@ class Indexer():
         
         #Team propagation
         self.orgComputedFields = ["Wins", "Losses", "WinRate", "Appearance", "RegionStrength"]
-        self.orgFields = ["Damage Per Minute","First Blood","Kills Per Game","Deaths Per Game","Average Kill / Death Ratio","Average Assists / Kill","Plates / game (TOP|MID|BOT)","Dragons / game","Dragons at 15 min","Herald / game","Nashors / game"]
-        self.mappedOrgFields = ["DPM", "FirstBlood", "KillsPG", "DeathsPG", "AverageKDR", "AverageAPK", "Plates", "Dragons", "D15", "Heralds", "Nashors"]
+        self.orgFields = ["Average Game Duration", "Damage Per Minute","First Blood","Kills Per Game","Deaths Per Game","Average Kill / Death Ratio","Average Assists / Kill","Plates / game (TOP|MID|BOT)","Dragons / game","Dragons at 15 min","Herald / game","Nashors / game"]
+        self.mappedOrgFields = ["AvgGameTime", "DPM", "FirstBlood", "KillsPG", "DeathsPG", "AverageKDR", "AverageAPK", "Plates", "Dragons", "D15", "Heralds", "Nashors"]
         self.orgPercentFields = ["FirstBlood"]
         self.orgSplitterFields = ["Dragons","Heralds","Nashors"]
         self.orgTrisplitFields = ["Plates"]
