@@ -9,6 +9,8 @@ tournamentChampsInput = "../data/tournamentChamps.csv"
 
 class Indexer():
     def __init__(self):
+        self.records = pd.read_csv('../data/records.csv')
+        
         orgStats = pd.read_csv(orgStatsInput, keep_default_na=False, na_values='-')
         orgStats["Team ID"] = orgStats["Team ID"].astype("Int32")
         playerChamps = pd.read_csv(playerChampsInput)
@@ -41,7 +43,7 @@ class Indexer():
         #Player propagation
         self.playerFields = ["KDA", "CSPM", "GPM", "Gold %", "Kill Participation %", "Damage Per Minute", "Damage %", "K+A/M","Solo Kills","Penta Kills"]
         self.mappedPlayerFields = ["KDA", "CSPM", "GPM", "GoldPercent", "KP", "DPM", "DamagePercent", "KAM", "SoloKills", "Pentakills"]
-        self.percentFields = ["GoldPercent", "KP", "DamagePercent"]
+        self.playerPercentFields = ["GoldPercent", "KP", "DamagePercent"]
         
         self.nullPlayerFieldsRowArray = [
             {f"T{i+1}_P{j+1}_{field}": None for field in self.mappedPlayerFields}
@@ -100,7 +102,7 @@ class Indexer():
                             relevant_data = relevant_data.fillna(0)
                             player_result_data = {f"T{prefix}_P{playerPrefix}_WinRate":[player_win_loss[0]/(player_win_loss[0]+player_win_loss[1])]}
                             for i, field in enumerate(self.playerFields):
-                                if self.mappedPlayerFields[i] in self.percentFields:
+                                if self.mappedPlayerFields[i] in self.playerPercentFields:
                                     player_result_data[f"T{prefix}_P{playerPrefix}_{self.mappedPlayerFields[i]}"] = [float(relevant_data[field].strip()[:-1])/100]
                                 else:
                                     player_result_data[f"T{prefix}_P{playerPrefix}_{self.mappedPlayerFields[i]}"] = [relevant_data[field]]
