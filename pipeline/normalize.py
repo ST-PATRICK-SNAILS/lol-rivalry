@@ -13,5 +13,15 @@ for column in normalize_columns:
     else: 
         df[column] = df[column].apply(lambda _: 0)
     
-print(df)
+drop_suffixes = ["_Wins", "_Losses", "_Spilt1", "_Split2", "_Split3", "_GoldPercent", "_DamagePercent", "_Relative", "_Pentakills", "_GPM", "_KAM"]
+drops = []
+
+for column in df.columns:
+    for suffix in drop_suffixes:
+        if column.endswith(suffix):
+            drops.append(column)
+            break
+
+df.drop(columns=drops, inplace=True)
+
 df.to_csv('./writes/normalizedpropdata.csv')
