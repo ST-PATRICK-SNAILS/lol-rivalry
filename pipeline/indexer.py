@@ -16,7 +16,7 @@ class Indexer():
         
         orgStats = pd.read_csv(orgStatsInput, keep_default_na=False, na_values='-')
         orgStats["Team ID"] = orgStats["Team ID"].astype("Int32")
-        playerChamps = pd.read_csv(playerChampsInput)
+        playerChamps = pd.read_csv(playerChampsInput, na_values='-')
         playerChamps["Player ID"] = playerChamps["Player ID"].astype("Int32")
         playerHistory = pd.read_csv(playerHistoryInput, keep_default_na=False, na_values='-')
         playerHistory["Player ID"] = playerHistory["Player ID"].astype("Int32")
@@ -37,7 +37,7 @@ class Indexer():
         self.tournamentChamps = tournamentChamps.sort_values("Tournament Name")
         self.tournamentChampsCount = self.tournamentChamps.shape[0]
         
-        self.champions = pd.read_csv(championsInput)
+        self.champions = pd.read_csv(championsInput, na_values='-')
         
         #Event propagation
         self.regions = ["WR", "KR", "CN", "EUW", "NA", "PCS", "VN", "JP", "BR", "LAT"]
@@ -81,6 +81,13 @@ class Indexer():
             for j in range(5)
         ]
         self.memo_rosterdata = {}
+        
+        #Champion propagation
+        self.champFields = ["Win Rate", "KDA", "CS per Minute", "Gold Per Minute", "Damage Per Minute", "CS Differential at 15 min", 
+                            "Gold Differential at 15 min", "XP Differential at 15 min"]
+        self.mappedChampFields = ["Win Rate", "KDA", "CSM", "DPM", "GPM", "CSD@15", "GD@15", "XPD@15"]
+        self.champPercentFields = ["Win Rate"]
+        self.memo_seasonchamps = {}
         
     def form_batches(self, df, batch_count):
         rows = df.shape[0]
@@ -152,7 +159,9 @@ class Indexer():
                                     player_result_data[f"T{prefix}_P{playerPrefix}_{self.mappedPlayerFields[i]}"] = [float(relevant_data[field].strip()[:-1])/100]
                                 else:
                                     player_result_data[f"T{prefix}_P{playerPrefix}_{self.mappedPlayerFields[i]}"] = [relevant_data[field]]
-                            return pd.DataFrame(player_result_data)
+                            player_dict_df = pd.DataFrame(player_result_data)
+                            meta_adjusted = self.processPlayerChampsByIdAndSeason(id, f"T{prefix}_P{playerPrefix}", season, split)
+                            return pd.concat([player_dict_df, meta_adjusted], axis=1)
                         if searchSplit == "Spring":
                             searchSeason -= 1
                             searchSplit = "Summer"
@@ -301,7 +310,41 @@ class Indexer():
         
         df_t1, df_t2 = processOrgFromId(team1, 1), processOrgFromId(team2, 2)
         return pd.concat([df_t1, df_t2], axis=1)
+    
+    def processPlayerChampsByIdAndSeason(self, id, prefix, season, split):
+        season_key = f"S{season} {split}"
+        player_champs = self.getPlayerChampsById(id).dropna()
+        
+        if season_key in self.memo_seasonchamps:
+            season_champs = self.memo_seasonchamps[season_key]
+        else:
+            season_champs = self.champions[(self.champions["Season"] == f'S{season}') & (self.champions["Split"] == split)].dropna()
+            self.memo_seasonchamps[season_key] = season_champs
+
+        meta_data = pd.DataFrame({f'Meta_Adjusted_{prefix}_{col}': [0] for col in self.mappedChampFields}, dtype=float)
+        total_presence = 0
+        season_champs_dict = season_champs.set_index("Champion").to_dict(orient='index')
+        
+        for _, champ_row in player_champs.iterrows():
+            champ_name = champ_row["Champion Name"]
+            if champ_name in season_champs_dict:
+                season_row = season_champs_dict[champ_name]
+                presence = (float(season_row["Presence"][:-1]) ** 2) / 10000
+                total_presence += presence
+                for j, column in enumerate(self.champFields):
+                    mapped_col = self.mappedChampFields[j]
+                    if column in self.champPercentFields:
+                        meta_data.at[0, f'Meta_Adjusted_{prefix}_{mapped_col}'] += (
+                            float(champ_row[column][:-1]) - float(season_row[mapped_col][:-1])
+                        ) * (presence / 100)
+                    else:
+                        meta_data.at[0, f'Meta_Adjusted_{prefix}_{mapped_col}'] += (
+                            float(champ_row[column]) - float(season_row[mapped_col])
+                        ) * presence
+
+        if total_presence != 0:
+            meta_data = meta_data / total_presence
+
+        return meta_data
         
 indexer = Indexer()
-
-print(indexer.getSplitWeights(14, "Spring"))
