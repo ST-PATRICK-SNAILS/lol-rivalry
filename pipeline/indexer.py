@@ -3,6 +3,7 @@ import warnings
 import re
 import math
 
+championsInput = "../data/champions.csv"
 orgStatsInput = "../data/orgStats.csv"
 playerChampsInput = "../data/playerChamps.csv"
 playerHistoryInput = "../data/playerHistory.csv"
@@ -27,6 +28,7 @@ class Indexer():
         self.orgStats = orgStats.sort_values("Team ID")
         self.orgCount = self.orgStats.shape[0]
         self.playerChamps = playerChamps.sort_values("Player ID")
+        self.playerChamps["Games"] = self.playerChamps["Record"].apply(lambda i: list(map(lambda j: int(j.strip()[:-1]), i.split("-")))[0] + list(map(lambda j: int(j.strip()[:-1]), i.split("-")))[1])
         self.playerChampsCount = self.playerChamps.shape[0]
         self.playerHistory = playerHistory.sort_values("Player ID")
         self.playerHistoryCount = self.playerHistory.shape[0]
@@ -34,6 +36,8 @@ class Indexer():
         self.tournamentCount = self.tournamentList.shape[0]
         self.tournamentChamps = tournamentChamps.sort_values("Tournament Name")
         self.tournamentChampsCount = self.tournamentChamps.shape[0]
+        
+        self.champions = pd.read_csv(championsInput)
         
         #Event propagation
         self.regions = ["WR", "KR", "CN", "EUW", "NA", "PCS", "VN", "JP", "BR", "LAT"]
@@ -108,8 +112,12 @@ class Indexer():
     
     def getTournamentChampsByName(self, name):
         start_pos = self.tournamentChamps['Tournament Champs'].searchsorted(name, side='left')
-        end_pos = self.tournamentChamps['Tournament Name'].searchsorted(name, side='right')
+        end_pos = self.tournamentChamps['Tournament Champs'].searchsorted(name, side='right')
         return self.tournamentChamps.iloc[start_pos:end_pos]
+    
+    def getSplitWeights(self, season, split):
+        top_champs = self.champions[(self.champions["Season"] == f"S{season}") & (self.champions["Split"] == split)].iloc[0:50]
+        print(top_champs)
     
     def processRosterDataByTeams(self, season, split, team1, team2):
         def getRosterFromId(team_id, prefix):
@@ -207,17 +215,6 @@ class Indexer():
             warnings.warn(f"!! Tournament data for {name} not found")
             return pd.DataFrame()
         
-    def processTournamentMetaByName(self, name):
-        data = self.getTournamentDataByName(name)
-        if data.shape[0] >= 1:
-            tr_avg = data.iloc[0]["Average Time"]
-            result_data = {}
-            result_data["Average Time"] = [tr_avg]
-            return pd.DataFrame(result_data)
-        else:
-            warnings.warn(f"!! Tournament data for {name} not found")
-            return pd.DataFrame()
-        
     def processOrgDataByIds(self, team1, team2):
         def processOrgFromId(team_id, prefix):
             if f"T{prefix}_{team_id}" in self.memo_rosterdata:
@@ -306,3 +303,5 @@ class Indexer():
         return pd.concat([df_t1, df_t2], axis=1)
         
 indexer = Indexer()
+
+print(indexer.getSplitWeights(14, "Spring"))

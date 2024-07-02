@@ -7,7 +7,7 @@ import pandas as pd
 
 rows = indexer.records.shape[0]
 
-with alive_bar(rows * 2, title='Step 1: Event Propagation', bar='smooth') as event_bar: event = eventPropagate(event_bar)
+with alive_bar(rows, title='Step 1: Event Propagation', bar='smooth') as event_bar: event = eventPropagate(event_bar)
 with alive_bar(rows, title='Step 2: Organization Propagation', bar='smooth') as org_bar: orgs = orgPropagate(org_bar)
 with alive_bar(rows, title='Step 3: Player/Roster Propagation', bar='smooth') as player_bar: players = playerPropagate(player_bar)
 
