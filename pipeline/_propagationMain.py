@@ -7,11 +7,11 @@ import pandas as pd
 
 rows = indexer.records.shape[0]
 
-# with alive_bar(rows, title='Step 1: Event Propagation', bar='smooth') as event_bar: event = eventPropagate(event_bar)
-# with alive_bar(rows, title='Step 2: Organization Propagation', bar='smooth') as org_bar: orgs = orgPropagate(org_bar)
+with alive_bar(rows, title='Step 1: Event Propagation', bar='smooth') as event_bar: event = eventPropagate(event_bar)
+with alive_bar(rows, title='Step 2: Organization Propagation', bar='smooth') as org_bar: orgs = orgPropagate(org_bar)
 with alive_bar(rows, title='Step 3: Player/Roster Propagation', bar='smooth') as player_bar: players = playerPropagate(player_bar)
 
-df = pd.concat([players, indexer.records['Games'], indexer.records['Result']], axis=1).dropna()
+df = pd.concat([event, orgs, players, indexer.records['Games'], indexer.records['Result']], axis=1).dropna()
 print("Pipeline finished, printing dataframe:")
 print(df.columns)
 print(df)

@@ -2,6 +2,7 @@ import pandas as pd
 import warnings
 import re
 import math
+import time
 
 championsInput = "../data/champions.csv"
 orgStatsInput = "../data/orgStats.csv"
@@ -9,6 +10,8 @@ playerChampsInput = "../data/playerChamps.csv"
 playerHistoryInput = "../data/playerHistory.csv"
 tournamentListInput = "../data/tournamentList.csv"
 tournamentChampsInput = "../data/tournamentChamps.csv"
+
+pd.options.mode.chained_assignment = None
 
 class Indexer():
     def __init__(self):
@@ -88,6 +91,7 @@ class Indexer():
         self.mappedChampFields = ["Win Rate", "KDA", "CSM", "DPM", "GPM", "CSD@15", "GD@15", "XPD@15"]
         self.champPercentFields = ["Win Rate"]
         self.memo_seasonchamps = {}
+        self.memo_playerchamps = {}
         
     def form_batches(self, df, batch_count):
         rows = df.shape[0]
@@ -103,10 +107,17 @@ class Indexer():
         return self.orgStats.iloc[start_pos:end_pos]
     
     def getPlayerChampsById(self, id):
-        start_pos = self.playerChamps['Player ID'].searchsorted(id, side='left')
-        end_pos = self.playerChamps['Player ID'].searchsorted(id, side='right')
-        return self.playerChamps.iloc[start_pos:end_pos]
-    
+        if id in self.memo_playerchamps:
+            return self.memo_playerchamps[id]
+        else:
+            start_pos = self.playerChamps['Player ID'].searchsorted(id, side='left')
+            end_pos = self.playerChamps['Player ID'].searchsorted(id, side='right')
+            res = self.playerChamps.iloc[start_pos:end_pos]
+            res_copy = res.copy().dropna()
+            self.memo_playerchamps[id] = res_copy
+            return res_copy
+
+        
     def getPlayerHistoryById(self, id):
         start_pos = self.playerHistory['Player ID'].searchsorted(id, side='left')
         end_pos = self.playerHistory['Player ID'].searchsorted(id, side='right')
@@ -122,16 +133,13 @@ class Indexer():
         end_pos = self.tournamentChamps['Tournament Champs'].searchsorted(name, side='right')
         return self.tournamentChamps.iloc[start_pos:end_pos]
     
-    def getSplitWeights(self, season, split):
-        top_champs = self.champions[(self.champions["Season"] == f"S{season}") & (self.champions["Split"] == split)].iloc[0:50]
-        print(top_champs)
-    
     def processRosterDataByTeams(self, season, split, team1, team2):
         def getRosterFromId(team_id, prefix):
             if f"T{prefix}_{team_id}" in self.memo_rosterdata:
                 return self.memo_rosterdata[f"T{prefix}_{team_id}"]
             
             def getPlayerRelevantSplitById(id, playerPrefix):
+                #start_time = time.time()
                 playerData = self.getPlayerHistoryById(int(id.strip())).sort_values("Player Name")
                 if(playerData.shape[0] > 0):
                     playerName = ' '.join(playerData.iloc[0]["Player Name"].split()[:-2])
@@ -160,6 +168,11 @@ class Indexer():
                                 else:
                                     player_result_data[f"T{prefix}_P{playerPrefix}_{self.mappedPlayerFields[i]}"] = [relevant_data[field]]
                             player_dict_df = pd.DataFrame(player_result_data)
+                            # end_time = time.time()  
+                            # elapsed_time = end_time - start_time 
+                            # print(f"Time taken for processPlayerChampsByIdAndSeason: {elapsed_time:.6f} seconds")
+
+                            # return player_dict_df
                             meta_adjusted = self.processPlayerChampsByIdAndSeason(id, f"T{prefix}_P{playerPrefix}", season, split)
                             return pd.concat([player_dict_df, meta_adjusted], axis=1)
                         if searchSplit == "Spring":
@@ -313,38 +326,46 @@ class Indexer():
     
     def processPlayerChampsByIdAndSeason(self, id, prefix, season, split):
         season_key = f"S{season} {split}"
-        player_champs = self.getPlayerChampsById(id).dropna()
-        
-        if season_key in self.memo_seasonchamps:
-            season_champs = self.memo_seasonchamps[season_key]
+        player_champs = self.getPlayerChampsById(id)
+
+        if season_key not in self.memo_seasonchamps:
+            season_champs_dict = self.champions[(self.champions["Season"] == f'S{season}') & (self.champions["Split"] == split)].dropna()
+            season_champs_dict = season_champs_dict.set_index("Champion").to_dict(orient='index')
+            self.memo_seasonchamps[season_key] = season_champs_dict
         else:
-            season_champs = self.champions[(self.champions["Season"] == f'S{season}') & (self.champions["Split"] == split)].dropna()
-            self.memo_seasonchamps[season_key] = season_champs
+            season_champs_dict = self.memo_seasonchamps[season_key]
+
+        player_champs = player_champs.loc[player_champs["Champion Name"].isin(season_champs_dict.keys())]
+        if player_champs.empty:
+            return pd.DataFrame({f'Meta_Adjusted_{prefix}_{col}': [0] for col in self.mappedChampFields}, dtype=float)
 
         meta_data = pd.DataFrame({f'Meta_Adjusted_{prefix}_{col}': [0] for col in self.mappedChampFields}, dtype=float)
         total_presence = 0
-        season_champs_dict = season_champs.set_index("Champion").to_dict(orient='index')
-        
-        for _, champ_row in player_champs.iterrows():
-            champ_name = champ_row["Champion Name"]
-            if champ_name in season_champs_dict:
-                season_row = season_champs_dict[champ_name]
-                presence = (float(season_row["Presence"][:-1]) ** 2) / 10000
-                total_presence += presence
-                for j, column in enumerate(self.champFields):
-                    mapped_col = self.mappedChampFields[j]
-                    if column in self.champPercentFields:
-                        meta_data.at[0, f'Meta_Adjusted_{prefix}_{mapped_col}'] += (
-                            float(champ_row[column][:-1]) - float(season_row[mapped_col][:-1])
-                        ) * (presence / 100)
-                    else:
-                        meta_data.at[0, f'Meta_Adjusted_{prefix}_{mapped_col}'] += (
-                            float(champ_row[column]) - float(season_row[mapped_col])
-                        ) * presence
 
-        if total_presence != 0:
-            meta_data = meta_data / total_presence
+        def presence_compute(x):
+            nonlocal total_presence
+            res = (float(season_champs_dict[x]["Presence"][:-1]) ** 2) / 10000
+            total_presence += res
+            return res
 
+        presence_values = player_champs["Champion Name"].map(lambda x: presence_compute(x))
+        if total_presence == 0: return meta_data
+        player_champs["Presence"] = presence_values / total_presence
+
+        for column, mapped_col in zip(self.champFields, self.mappedChampFields):
+            if column in self.champPercentFields:
+                player_champs[f'Diff_{mapped_col}'] = player_champs.apply(
+                    lambda row: (float(row[column][:-1]) - float(season_champs_dict[row["Champion Name"]][mapped_col][:-1])) * (row["Presence"] / 100),
+                    axis=1
+                )
+            else:
+                player_champs[f'Diff_{mapped_col}'] = player_champs.apply(
+                    lambda row: (float(row[column]) - float(season_champs_dict[row["Champion Name"]][mapped_col])) * row["Presence"],
+                    axis=1
+                )
+            meta_data.at[0, f'Meta_Adjusted_{prefix}_{mapped_col}'] = player_champs[f'Diff_{mapped_col}'].sum()
+            
         return meta_data
+
         
 indexer = Indexer()
