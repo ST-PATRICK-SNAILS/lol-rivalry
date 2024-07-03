@@ -47,7 +47,7 @@ csv_file_path = '../data/champions.csv'
 # Writing data to CSV
 with open(csv_file_path, mode='w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Season', 'Split', 'Champion', 'Picks', 'Bans', 'Presence', 'Wins', 'Losses', 'Win Rate', 'KDA',
+    writer.writerow(['Season', 'Split', 'Champion', 'Champion ID', 'Picks', 'Bans', 'Presence', 'Wins', 'Losses', 'Win Rate', 'KDA',
                                         'Avg BT', 'Avg GT', 'CSM', 'DPM', 'GPM', 'CSD@15', 'GD@15', 'XPD@15'])
     for season in range(11, 15):
         for split in ["Spring", "Summer"]:

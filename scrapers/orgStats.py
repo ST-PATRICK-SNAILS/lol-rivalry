@@ -107,11 +107,13 @@ def get_team_tournament(id, tourney):
 with open('../data/orgIds.csv', mode='r', newline='') as file:
     with open('../data/orgStats.csv', mode='w', newline='', encoding='utf-8') as writefile:
         writer = csv.writer(writefile)
-        writer.writerow(['Team Name', 'TeamId', 'Event', 'Roster Names', 'Roster Ids', 'Region', 'Record', 'Average Game Duration', 'Ally Bans', 'Blue Ally Bans', 'Red Ally Bans', 
+        writer.writerow(['Team Name', 'Team ID', 'Event', 'Roster Names', 'Roster Ids', 'Region', 'Record', 'Average Game Duration', 'Ally Bans', 'Blue Ally Bans', 'Red Ally Bans', 
                     'Enemy Bans', 'Blue Enemy Bans', 'Red Enemy Bans', 'Damage Per Minute', 'First Blood', 'Kills Per Game', 
                     'Deaths Per Game', 'Average Kill / Death Ratio', 'Average Assists / Kill', 'Plates / game (TOP|MID|BOT)', 
                     'Dragons / game', 'Dragons at 15 min', 'Herald / game', 'Nashors / game'])
-        BATCH_SIZE = 150
+        writer_lock = threading.Lock()
+        
+        BATCH_SIZE = 200
         batches, acc = [], []
         count = 0
         for row in file:
@@ -130,8 +132,8 @@ with open('../data/orgIds.csv', mode='r', newline='') as file:
             for iden in batch:
                 for option in get_team_page(iden):
                     data = get_team_tournament(iden, option)
-                    print(data)
-                    writer.writerow(data)
+                    with writer_lock:
+                        writer.writerow(data)
                     
         threads = []
         for batch in batches:
